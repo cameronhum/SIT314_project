@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Publisher</title>
+</head>
+<body>
+    <h1>Light Controller</h1>
+    <div id="lightData"></div>
+    <script>
+        
+
+        fetch('/api/lightData')
+            .then((response) => response.json())
+            .then((data) => {
+                const lightDataElement = document.getElementById('lightData');
+                console.log(data)
+                const lightsByRoom = {}
+
+                data.forEach((light) => {
+                    console.log(light)
+                    const room = light.room;
+                    if (!lightsByRoom.hasOwnProperty(room)) {
+                        lightsByRoom[room] = [];
+                    }
+                    lightsByRoom[room].push(light);
+                });
+
+                console.log(lightsByRoom);
+                for (room in lightsByRoom) {
+                    const h1RoomElement = document.createElement('h1');
+                    h1RoomElement.textContent = room;
+                    lightDataElement.appendChild(h1RoomElement);
+                    
+                    for (lightID in lightsByRoom[room]) {
+                        let light = lightsByRoom[room][lightID];
+                        const lightName = light.name;
+                        const h2Element = document.createElement('h2');
+                        h2Element.textContent = lightName;
+                        lightDataElement.appendChild(h2Element);
+                        const deleteButtonElement = document.createElement('button');
+                        deleteButtonElement.textContent = 'delete';
+                        const toggleLightElement = document.createElement('button');
+                        if (light.state) {
+                            toggleLightElement.textContent = 'turn off light';
+                        } else {
+                            toggleLightElement.textContent = 'turn on light';
+                        }
+                        toggleLightElement.addEventListener('click', () => {
+                            fetch('/toggle', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ ...light }),
+                            })
+                            light.state = !light.state;
+                            if (light.state) {
+                                toggleLightElement.textContent = 'turn off light';
+                            } else {
+                                toggleLightElement.textContent = 'turn on light';
+                            }
+                        });
+                        lightDataElement.appendChild(toggleLightElement);
+                        deleteButtonElement.addEventListener('click', () => {
+                            fetch('/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ id: light.id }),
+                            })
+                            h2Element.remove()
+                            lightDataElement.remove()
+                            deleteButtonElement.remove()
+
+                        });
+                        lightDataElement.appendChild(deleteButtonElement);
+
+
+                    }
+                }
+                
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+    </script>
+</body>
+</html>
